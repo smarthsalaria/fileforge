@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { Document, Page } from 'react-pdf'; // Import Page for Single View
-import { LazyPage } from './LazyPage';      // Import LazyPage for Scroll View
-import { Loader2 } from 'lucide-react';
+import { Document, Page } from 'react-pdf';
+import { LazyPage } from './LazyPage';
 import { useEditorStore } from '@/modules/editor/store';
 
 import 'react-pdf/dist/Page/AnnotationLayer.css';
@@ -16,9 +15,14 @@ interface MainViewerProps {
 export const MainViewer = ({ pdfFile }: MainViewerProps) => {
   const { 
     numPages, setNumPages, 
-    scale, rotation, pdfVersion, 
+    scale, 
+    rotation: globalRotation, // Rename global rotation to avoid conflict
+    pdfVersion, 
     viewMode, activePageIndex, setActivePageIndex,
-    selectedPages, togglePageSelection 
+    selectedPages, togglePageSelection,
+    isTextSelectMode,
+    pageOrder,
+    pageRotations // <--- Get Virtual Rotations
   } = useEditorStore();
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -42,57 +46,68 @@ export const MainViewer = ({ pdfFile }: MainViewerProps) => {
   const handleDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
     if (activePageIndex >= numPages) setActivePageIndex(Math.max(0, numPages - 1));
-    setTimeout(() => {
-      document.getElementById(`page_scroll_${activePageIndex}`)?.scrollIntoView({ behavior: 'auto', block: 'center' });
-    }, 100);
   };
 
-  const safePageIndex = Math.min(Math.max(0, activePageIndex), Math.max(0, numPages - 1));
-  const safePageNumber = safePageIndex + 1;
+  const safeVisualIndex = Math.min(Math.max(0, activePageIndex), Math.max(0, numPages - 1));
+  const realPageNumber = (pageOrder[safeVisualIndex] ?? 0) + 1;
+  
+  // Single View Rotation Calculation
+  const singleViewRotation = (globalRotation + (pageRotations[safeVisualIndex] || 0)) % 360;
 
   return (
     <div 
       ref={containerRef} 
-      className="w-full h-full overflow-y-auto overflow-x-hidden flex justify-center p-4"
+      className="w-full h-full overflow-auto p-4 relative bg-slate-100/50"
     >
       <Document
-        key={`main_doc_${pdfVersion}`} 
         file={pdfFile}
         onLoadSuccess={handleDocumentLoadSuccess}
-        loading={<div className="mt-20 flex flex-col items-center gap-2"><Loader2 className="animate-spin text-blue-500" /> Loading PDF...</div>}
-        className="max-w-full"
+        loading={null} 
+        className="mx-auto w-fit min-h-full" 
       >
-        {/* MODE 1: SCROLL VIEW (Uses LazyPage for performance) */}
-        {viewMode === 'scroll' && Array.from(new Array(numPages), (el, index) => (
-          <div 
-            id={`page_scroll_${index}`}
-            key={`page_scroll_${index}_${pdfVersion}_${rotation}`}
-            onClick={(e) => handlePageClick(index, e)}
-            className={`mb-6 shadow-lg transition-all duration-200 cursor-pointer relative group ${selectedPages.has(index) ? 'ring-4 ring-blue-500 ring-offset-2' : 'hover:ring-2 hover:ring-slate-300'}`}
-          >
-            <div className="absolute top-2 right-2 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded z-10 pointer-events-none">{index + 1}</div>
-            
-            {/* FIX: Use LazyPage here to prevent "TextLayer task cancelled" */}
-            <LazyPage 
-              pageNumber={index + 1} 
-              width={pageWidth} 
-              rotation={rotation}
-              scale={1.0} 
-            />
-          </div>
-        ))}
+        {/* MODE 1: SCROLL VIEW */}
+        {viewMode === 'scroll' && pageOrder.map((originalPageIndex, visualIndex) => {
+          
+          // FIX: Calculate rotation inside the map function
+          const itemRotation = (globalRotation + (pageRotations[visualIndex] || 0)) % 360;
 
-        {/* MODE 2: SINGLE VIEW (Standard Page is fine here) */}
+          return (
+            <div 
+              id={`page_scroll_${visualIndex}`}
+              key={`page_scroll_${visualIndex}_${pdfVersion}_${globalRotation}`}
+              onClick={(e) => handlePageClick(visualIndex, e)}
+              className={`
+                mb-6 shadow-lg transition-all duration-200 cursor-pointer relative group mx-auto
+                ${selectedPages.has(visualIndex) ? 'ring-4 ring-blue-500 ring-offset-2' : 'hover:ring-2 hover:ring-slate-300'}
+              `}
+              style={{ width: pageWidth }}
+            >
+              <div className="absolute top-2 right-2 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded z-10 pointer-events-none">{visualIndex + 1}</div>
+              
+              <LazyPage 
+                pageNumber={originalPageIndex + 1} 
+                width={pageWidth} 
+                rotation={itemRotation} // <--- Pass Calculated Rotation
+                scale={1.0} 
+              />
+            </div>
+          );
+        })}
+
+        {/* MODE 2: SINGLE VIEW */}
         {viewMode === 'single' && numPages > 0 && (
-          <div className="shadow-2xl transition-all duration-200 h-fit">
+          <div 
+            className="shadow-2xl transition-all duration-200 h-fit mx-auto"
+            style={{ width: pageWidth }}
+          >
             <Page 
-              key={`page_single_${safePageIndex}_${rotation}`} 
-              pageNumber={safePageNumber} 
+              key={`page_single_${safeVisualIndex}_${singleViewRotation}`} 
+              pageNumber={realPageNumber} 
               width={pageWidth} 
-              rotate={rotation} 
+              rotate={singleViewRotation} // <--- Pass Calculated Rotation
               scale={1.0} 
-              renderTextLayer={true} 
-              renderAnnotationLayer={true} 
+              renderTextLayer={isTextSelectMode} 
+              renderAnnotationLayer={isTextSelectMode} 
               className="bg-white" 
             />
           </div>

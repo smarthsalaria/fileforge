@@ -5,13 +5,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { 
   Trash2, PlusSquare, RefreshCw, MousePointer2, 
-  Type, Eraser, Search, Image as ImageIcon 
+  Type, Eraser, Search, Image as ImageIcon,
+  Undo2, Redo2 
 } from 'lucide-react';
 import { useEditorStore } from '@/modules/editor/store';
 import { usePdfActions } from '@/modules/editor/hooks/usePdfActions';
 
 export const EditorSidebar = ({ isOpen }: { isOpen: boolean }) => {
-  const { selectedPages } = useEditorStore();
+  const { 
+    selectedPages, undo, redo, historyIndex, history, 
+    isTextSelectMode, toggleTextSelectMode
+   } = useEditorStore();
   const { addBlankPage, rotateSelectedPages, deleteSelectedPages } = usePdfActions();
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -43,10 +47,10 @@ export const EditorSidebar = ({ isOpen }: { isOpen: boolean }) => {
     },
     {
       id: 'select-text',
-      label: 'Select Text',
-      icon: <MousePointer2 className="w-4 h-4 mr-2" />,
-      action: () => {},
-      disabled: true,
+      label: isTextSelectMode ? 'Disable Selection' : 'Select Text', // Dynamic Label
+      icon: <MousePointer2 className={`w-4 h-4 mr-2 ${isTextSelectMode ? 'text-blue-600' : ''}`} />,
+      action: toggleTextSelectMode, // Hook up the action
+      disabled: false, // Enable the button
       category: 'Content Tools'
     },
     {
@@ -95,6 +99,16 @@ export const EditorSidebar = ({ isOpen }: { isOpen: boolean }) => {
       <div className="p-4 border-b space-y-3 bg-white">
         <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Editor Tools</h2>
         
+        {/* UNDO / REDO BUTTONS */}
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={undo} disabled={historyIndex <= 0} title="Undo">
+              <Undo2 className="w-4 h-4 text-slate-600" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={redo} disabled={historyIndex >= history.length - 1} title="Redo">
+              <Redo2 className="w-4 h-4 text-slate-600" />
+            </Button>
+          </div>
+
         {/* Search Box */}
         <div className="relative">
           <Search className="absolute left-2 top-2.5 h-4 w-4 text-slate-400" />

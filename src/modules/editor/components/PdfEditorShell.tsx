@@ -12,7 +12,9 @@ import { PdfUploader } from './PdfUploader';
 import { EditorSidebar } from './EditorSidebar';
 import { MainViewer } from './MainViewer';
 import { ThumbnailStrip } from './ThumbnailStrip';
-
+import { BusyOverlay } from './BusyOverlay';
+import { usePdfActions } from '@/modules/editor/hooks/usePdfActions';
+import { Save } from 'lucide-react';
 setupPdfWorker();
 
 export default function PdfEditorShell() {
@@ -22,6 +24,10 @@ export default function PdfEditorShell() {
     scale, setScale
   } = useEditorStore();
 
+  const { saveChanges } = usePdfActions();
+  const { pageRotations } = useEditorStore();
+  
+  const hasChanges = Object.keys(pageRotations).length > 0;
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [pdfVersion, setPdfVersion] = useState(0);
 
@@ -42,10 +48,17 @@ export default function PdfEditorShell() {
   return (
     // FIX 1: Use h-[100dvh] for mobile browsers
     <div className="flex flex-col h-[100dvh] bg-slate-100 relative overflow-hidden">
-      
+      {/* 0. BUSY OVERLAY (Blocks interaction when processing) */}
+      <BusyOverlay />
+
       {/* HEADER */}
       <header className="flex items-center justify-between px-3 py-2 md:px-4 md:py-3 bg-white border-b shadow-sm z-30 shrink-0">
         <div className="flex items-center gap-2 md:gap-3">
+          {hasChanges && (
+          <Button size="sm" onClick={saveChanges} className="bg-blue-600 hover:bg-blue-700 text-white animate-pulse">
+            <Save className="w-4 h-4 mr-1" /> Save Changes
+          </Button>
+          )}
           {pdfBytes && (
             <Button variant="ghost" size="icon" className="lg:hidden" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}>
               <Menu className="w-5 h-5" />
