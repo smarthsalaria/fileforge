@@ -49,7 +49,9 @@ export default function PdfEditorShell() {
 
   const handlePreview = () => {
     if (!pdfBytes) return;
-    const blob = new Blob([pdfBytes], { type: 'application/pdf' });
+    
+    const blob = new Blob([pdfBytes as any], { type: 'application/pdf' });
+    
     const url = URL.createObjectURL(blob);
     window.open(url, '_blank');
   };
@@ -59,7 +61,7 @@ export default function PdfEditorShell() {
 
   return (
     // ROOT CONTAINER: Handles Full Height & Dark Mode Background
-    <div className="flex flex-col h-[100dvh] bg-slate-100 dark:bg-slate-950 relative overflow-hidden transition-colors duration-300">
+    <div className="flex flex-col h-dvh bg-slate-100 dark:bg-slate-950 relative overflow-hidden transition-colors duration-300">
       
       {/* 0. GLOBAL OVERLAYS */}
       <BusyOverlay />

@@ -5,11 +5,14 @@ import { Document, Page } from 'react-pdf';
 import { LazyPage } from './LazyPage';
 import { useEditorStore } from '@/modules/editor/store';
 
-import 'react-pdf/dist/Page/AnnotationLayer.css';
-import 'react-pdf/dist/Page/TextLayer.css';
+// @ts-ignore
+import 'react-pdf/dist/esm/Page/AnnotationLayer.css';
+// @ts-ignore
+import 'react-pdf/dist/esm/Page/TextLayer.css';
 
 interface MainViewerProps {
-  pdfFile: { data: Uint8Array } | undefined;
+  // Fix: flexible type to accept what react-pdf expects
+  pdfFile: string | File | { data: Uint8Array } | null | undefined;
 }
 
 export const MainViewer = ({ pdfFile }: MainViewerProps) => {
@@ -17,7 +20,7 @@ export const MainViewer = ({ pdfFile }: MainViewerProps) => {
     numPages, setNumPages, 
     scale, 
     rotation: globalRotation, 
-    pdfVersion, // <--- We use this to force re-renders
+    pdfVersion, 
     viewMode, activePageIndex, setActivePageIndex,
     selectedPages, togglePageSelection,
     isTextSelectMode,
@@ -30,6 +33,9 @@ export const MainViewer = ({ pdfFile }: MainViewerProps) => {
 
   useEffect(() => {
     const onResize = () => containerRef.current && setContainerWidth(containerRef.current.clientWidth);
+    // Initial measure
+    onResize();
+    
     const timer = setTimeout(onResize, 100);
     window.addEventListener('resize', onResize);
     return () => { window.removeEventListener('resize', onResize); clearTimeout(timer); };
@@ -45,7 +51,6 @@ export const MainViewer = ({ pdfFile }: MainViewerProps) => {
 
   const handleDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
     setNumPages(numPages);
-    // If the active page was deleted and index is now out of bounds, fix it
     if (activePageIndex >= numPages) setActivePageIndex(Math.max(0, numPages - 1));
   };
 
@@ -60,13 +65,13 @@ export const MainViewer = ({ pdfFile }: MainViewerProps) => {
       className="w-full h-full overflow-auto p-4 relative bg-slate-100/50 dark:bg-slate-950 transition-colors duration-300"
     >
       <Document
-        // CRITICAL FIX: The key forces React to destroy and recreate this component 
-        // whenever the PDF version changes (e.g., after Save).
         key={`main_doc_${pdfVersion}`} 
         file={pdfFile}
         onLoadSuccess={handleDocumentLoadSuccess}
-        loading={null} 
+        loading={<div className="text-center p-10 text-slate-500">Loading PDF...</div>}
         className="mx-auto w-fit min-h-full" 
+        // Handles "No PDF" state gracefully
+        noData={<div className="text-center p-10 text-slate-500">No PDF Loaded</div>}
       >
         {/* MODE 1: SCROLL VIEW */}
         {viewMode === 'scroll' && pageOrder.map((originalPageIndex, visualIndex) => {
@@ -87,7 +92,9 @@ export const MainViewer = ({ pdfFile }: MainViewerProps) => {
               `}
               style={{ width: pageWidth }}
             >
-              <div className="absolute top-2 right-2 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded z-10 pointer-events-none">{visualIndex + 1}</div>
+              <div className="absolute top-2 right-2 bg-black/50 text-white text-[10px] px-2 py-0.5 rounded z-10 pointer-events-none">
+                {visualIndex + 1}
+              </div>
               
               <LazyPage 
                 pageNumber={originalPageIndex + 1} 
