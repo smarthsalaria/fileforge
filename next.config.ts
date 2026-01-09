@@ -1,22 +1,22 @@
-import { Images } from "lucide-react";
 import type { NextConfig } from "next";
-/** @type {import('next').NextConfig} */
 
-const repoName = '/fileforge';
 const isGithubActions = process.env.GITHUB_ACTIONS || false;
 
 let assetPrefix = '';
 let basePath = '';
 
 if (isGithubActions) {
-  const repo = process.env.GITHUB_REPOSITORY.replace(/.*?\//, '');
+  const repoEnv = process.env.GITHUB_REPOSITORY || "";
+  const repo = repoEnv.replace(/.*?\//, '');
   assetPrefix = `/${repo}/`;
   basePath = `/${repo}`;
 }
 
-const nextConfig = {
+const nextConfig: NextConfig = {
   // 1. Tell Next.js to digest these specific packages
   transpilePackages: ['react-pdf', 'pdfjs-dist'],
+  
+  // Enforces static export for GitHub Pages (Disables Server Actions)
   output: 'export',
 
   images: {
