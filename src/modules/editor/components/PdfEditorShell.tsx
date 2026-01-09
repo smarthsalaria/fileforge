@@ -127,8 +127,17 @@ export default function PdfEditorShell() {
               </div>
 
               {/* Preview Button */}
-              <Button variant="outline" size="sm" onClick={handlePreview} className="hidden sm:flex dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200">
-                <Eye className="w-4 h-4 mr-1" /> Preview
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handlePreview} 
+                // CHANGED: Removed 'hidden'. Added 'px-2' for better icon sizing on mobile.
+                className="flex items-center dark:bg-slate-900 dark:border-slate-700 dark:text-slate-200 px-2 sm:px-3"
+              >
+                <Eye className="w-4 h-4 sm:mr-1" /> {/* Icon is always visible */}
+                
+                {/* Text is hidden on mobile (default), visible on sm+ screens */}
+                <span className="hidden sm:inline">Preview</span>
               </Button>
 
               {/* Close / Reload */}
